@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Абрис — автоматическое реферирование документов</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <h1>Абрис</h1>
+    <span class="mark">·</span>
+    <span class="tagline">Автоматическое реферирование документов — несколько методик Sentence Extraction на выбор</span>
+  </div>
+  <div class="variant-chip">Вариант <b>10</b> · RU/EN · медицина и искусствоведческая критика</div>
+</div>
+
+<div class="layout">
+
+  <!-- LEFT RAIL -->
+  <div class="rail">
+
+    <div class="block">
+      <p class="section-label">Источник документа</p>
+      <div class="dropzone" id="dropzone">
+        <strong>Перетащите файл сюда</strong>
+        .txt / .md, UTF-8, или нажмите, чтобы выбрать
+        <input type="file" id="fileInput" accept=".txt,.md" multiple>
+      </div>
+      <textarea class="pastebox" id="pasteBox" placeholder="…или вставьте текст документа прямо сюда"></textarea>
+      <div class="btn-row">
+        <button class="small" id="addPasted">Добавить текст</button>
+        <button class="small ghost" id="loadSamples">Загрузить примеры</button>
+      </div>
+    </div>
+
+    <div class="block">
+      <p class="section-label">Документы <span id="docCount" style="color:var(--text-lo); font-weight:400;"></span></p>
+      <div class="corpus-note" id="modeNote"></div>
+      <div class="doclist" id="docList"></div>
+    </div>
+
+    <div class="block">
+      <p class="section-label">Реферат</p>
+      <div class="field">
+        <label>Метод построения</label>
+        <select id="methodSelect">
+          <option value="tfidf">TF-IDF + позиция (методичка)</option>
+          <option value="textrank">TextRank (граф схожести)</option>
+          <option value="luhn">Luhn (скопление частых слов)</option>
+          <option value="ensemble">Ансамбль (среднее трёх методов)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Длина реферата <span id="lenVal">10 предл.</span></label>
+        <input type="range" id="lenSlider" min="3" max="20" value="10">
+      </div>
+
+      <details class="adv">
+        <summary>Дополнительные параметры</summary>
+        <div class="field" style="margin-top:14px;">
+          <label>Ключевые слова</label>
+          <select id="kwMethodSelect">
+            <option value="tfidf">TF-IDF (иерархия терминов)</option>
+            <option value="rake">RAKE (словосочетания)</option>
+          </select>
+        </div>
+        <div class="toggle-row">
+          <span>Вес по позиции в документе (Posd)</span>
+          <label class="switch"><input type="checkbox" id="usePosd" checked><span class="slider-toggle"></span></label>
+        </div>
+        <div class="toggle-row">
+          <span>Вес по позиции в абзаце (Posp)</span>
+          <label class="switch"><input type="checkbox" id="usePosp" checked><span class="slider-toggle"></span></label>
+        </div>
+        <div class="toggle-row">
+          <span>Устранять похожие предложения (MMR)</span>
+          <label class="switch"><input type="checkbox" id="useMMR" checked><span class="slider-toggle"></span></label>
+        </div>
+        <div class="toggle-row">
+          <span>Упрощать вводные конструкции</span>
+          <label class="switch"><input type="checkbox" id="trimDiscourse" checked><span class="slider-toggle"></span></label>
+        </div>
+        <div class="toggle-row">
+          <span>Исключать слова другого алфавита</span>
+          <label class="switch"><input type="checkbox" id="crossScript" checked><span class="slider-toggle"></span></label>
+        </div>
+      </details>
+    </div>
+
+    <div class="block">
+      <button class="primary full" id="runBtn" disabled>Построить реферат</button>
+    </div>
+
+  </div>
+
+  <!-- CENTER -->
+  <div class="center">
+
+    <div class="tabs">
+      <div class="tab active" data-panel="panelDoc">Документ</div>
+      <div class="tab" data-panel="panelSummary">Реферат</div>
+      <div class="tab" data-panel="panelKeywords">Ключевые слова</div>
+      <div class="tab" data-panel="panelAnalysis">Анализ</div>
+      <div class="tab help-tab" data-panel="panelHelp">Справка</div>
+    </div>
+
+    <div class="panel active" id="panelDoc">
+      <div id="docEmpty" class="empty-state">
+        <div class="glyph">§</div>
+        <p>Загрузите документ слева или нажмите «Загрузить примеры», затем «Построить реферат» — здесь появится исходный текст с подсветкой веса каждого предложения.</p>
+      </div>
+      <div id="docContent" style="display:none;">
+        <div class="legend">
+          <span><span class="sw" style="background:rgba(214,164,74,0.15);"></span>низкий вес</span>
+          <span><span class="sw" style="background:rgba(214,164,74,0.9);"></span>высокий вес</span>
+          <span>│ <span style="box-shadow: inset 0 -2px 0 var(--amber); padding:0 3px;">подчёркнуто</span> — вошло в реферат</span>
+        </div>
+        <div class="doc-render" id="docRender"></div>
+      </div>
+    </div>
+
+    <div class="panel" id="panelSummary">
+      <div id="summaryEmpty" class="empty-state">
+        <div class="glyph">¶</div>
+        <p>Классический реферат появится здесь после построения — набор из наиболее весомых предложений в порядке их следования в тексте.</p>
+      </div>
+      <div id="summaryContent" style="display:none;">
+        <div class="summary-render" id="summaryRender"></div>
+      </div>
+    </div>
+
+    <div class="panel" id="panelKeywords">
+      <div id="kwEmpty" class="empty-state">
+        <div class="glyph">#</div>
+        <p>Здесь появится реферат в виде ключевых слов — иерархия терминов (TF-IDF) или ранжированные словосочетания (RAKE), в зависимости от выбранного слева метода.</p>
+      </div>
+      <div id="kwContent" style="display:none;">
+        <div class="kw-tree" id="kwTree"></div>
+        <details class="adv" style="margin-top:22px;">
+          <summary>Граф понятий</summary>
+          <div id="graphContent" class="graph-wrap" style="margin-top:16px;">
+            <p class="graph-note">Граф ограничен top-8 понятиями и самыми сильными связями между ними — ради читаемости. Наведите курсор на узел или строку легенды, чтобы подсветить предложения-носители понятия во вкладке «Документ».</p>
+            <svg id="graphSvg" viewBox="0 0 820 480"></svg>
+            <div id="graphLegend" class="graph-legend"></div>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <div class="panel" id="panelAnalysis">
+      <div class="subnav">
+        <button id="analysisCompareBtn" class="on">Сравнение методов</button>
+        <button id="analysisTestBtn">Тестирование коллекции</button>
+      </div>
+
+      <div id="analysisCompareView">
+        <div id="cmpEmpty" class="empty-state">
+          <div class="glyph">≈</div>
+          <p>Здесь будет видно, какие предложения выбрал бы каждый из трёх методов (TF-IDF, TextRank, Luhn) — и насколько их выбор совпадает.</p>
+        </div>
+        <div id="cmpContent" style="display:none;">
+          <p class="hint-text">Столбцы показывают, какой метод выбрал бы это предложение в свой топ-N (без учёта MMR — для честного сравнения «сырых» рейтингов).</p>
+          <div id="cmpTable"></div>
+          <p class="section-label" style="margin-top:20px;">Совпадение выбора (коэффициент Жаккара)</p>
+          <div id="cmpOverlap"></div>
+        </div>
+      </div>
+
+      <div id="analysisTestView" style="display:none;">
+        <p class="hint-text">Загрузите несколько документов (или нажмите «Загрузить примеры» слева) и нажмите кнопку — для каждого документа выбранным методом построится реферат, замерятся время и информативность.</p>
+        <button class="ghost" id="runTestsBtn" disabled>Прогнать тестовую коллекцию</button>
+        <div id="testResults"></div>
+      </div>
+    </div>
+
+    <div class="panel" id="panelHelp">
+      <div class="help-content">
+
+        <h2>Как это работает</h2>
+        <p>Документ разбивается на абзацы и предложения. Доступны четыре независимые методики ранжирования предложений:</p>
+        <ul>
+          <li><b>TF-IDF + позиция</b> — метод из методички лабораторной работы: вес термина считается по модифицированной формуле TF·IDF, вес предложения — произведение веса содержащихся терминов и функций положения в документе/абзаце.</li>
+          <li><b>TextRank</b> — предложения образуют граф схожести (по пересечению слов), важность каждого считается степенным методом, аналогично PageRank.</li>
+          <li><b>Luhn</b> — классический метод: ищутся самые частые содержательные слова документа, вес предложения — по плотности их скопления.</li>
+          <li><b>Ансамбль</b> — оценки всех трёх методов нормируются и усредняются.</li>
+        </ul>
+        <pre class="formula">w(t,D) = 0.5 · (1 + tf(t,D)/tf_max(D)) · log(|DB| / df(t))
+Posd(Sᵢ) = 1 − BD(Sᵢ)/|D|      Posp(Sᵢ) = 1 − BP(Sᵢ)/|P|
+Score(Sᵢ) = Σ tf(t,Sᵢ)·w(t,D)
+Weight(Sᵢ) = Posd(Sᵢ) · Posp(Sᵢ) · Score(Sᵢ)   (переключаются слева, в «Дополнительных параметрах»)</pre>
+
+        <h2>MMR и вводные конструкции</h2>
+        <p><b>MMR (Maximal Marginal Relevance)</b> — вместо чистого топ-N по весу на каждом шаге выбирается предложение с наибольшей разницей между собственным весом и схожестью с уже отобранными; это снижает дублирование близких по смыслу предложений в реферате.</p>
+        <p><b>Упрощение вводных конструкций</b> — реализация пункта методички об «удалении вводных конструкций»: у отобранных предложений отсекаются начальные обороты вроде «Таким образом,», «Кроме того,», «However,» и т.п.</p>
+
+        <h2>IDF: одиночный документ vs коллекция</h2>
+        <p>Определяется автоматически по числу загруженных документов. Один документ — df(t) считается по его абзацам (каждый абзац — псевдо-документ). Два и более — df(t) считается по-настоящему междокументно, |DB| = число документов.</p>
+
+        <h2>Ключевые слова: TF-IDF vs RAKE</h2>
+        <p><b>TF-IDF</b> — термины с наибольшим w(t,D), словосочетания группируются вокруг них по вхождению (иерархия). <b>RAKE</b> (Rapid Automatic Keyword Extraction) — кандидатные словосочетания составляются из максимальных последовательностей не-стоп-слов; вес слова — степень совместной встречаемости, делённая на частоту; вес словосочетания — сумма весов слов. Даёт готовые словосочетания без иерархии.</p>
+
+        <h2>Автоопределение языка и области</h2>
+        <p>Язык — по соотношению кириллицы/латиницы. Предметная область (медицина / искусствоведческая критика — по варианту 10) — по совпадению токенов документа со словарями терминов каждой области.</p>
+
+        <h2>Информативность реферата</h2>
+        <p>Косинусная схожесть между вектором самых частых содержательных слов документа и тем же вектором, посчитанным только по предложениям реферата — показывает, насколько реферат покрывает основные, часто обсуждаемые темы документа.</p>
+
+        <h2>Требования варианта 10</h2>
+        <p>RU/EN, метод Sentence extraction, предметные области — научные статьи по медицине и критика произведений изобразительного искусства. Реферат — из двух разделов: классического (набор предложений) и в виде ключевых слов.</p>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT RAIL -->
+  <div class="rail right">
+    <p class="section-label">Анализ документа</p>
+
+    <div class="stat">
+      <div class="label">язык</div>
+      <div id="langBadges">—</div>
+    </div>
+    <div class="stat">
+      <div class="label">предметная область (авто)</div>
+      <div id="domainBadges">—</div>
+    </div>
+    <div class="stat">
+      <div class="label">объём документа</div>
+      <div class="value" id="statLen">—</div>
+    </div>
+    <div class="stat">
+      <div class="label">сжатие реферата</div>
+      <div class="value" id="statCompression">—</div>
+      <div class="gauge"><div id="gaugeCompression" style="width:0%"></div></div>
+    </div>
+    <div class="stat">
+      <div class="label">информативность (покрытие частотных тем)</div>
+      <div class="value" id="statInform">—</div>
+      <div class="gauge"><div id="gaugeInform" style="width:0%"></div></div>
+    </div>
+    <div class="stat">
+      <div class="label">время обработки</div>
+      <div class="value" id="statTime">—</div>
+    </div>
+    <div class="stat">
+      <div class="label">IDF источник</div>
+      <div class="value" id="statIdfSrc" style="font-size:13px; font-family:var(--sans); color:var(--text-lo);">—</div>
+    </div>
+  </div>
+
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/nlp.js"></script>
+<script src="js/methods.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
