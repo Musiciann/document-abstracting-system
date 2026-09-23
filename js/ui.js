@@ -3,6 +3,7 @@
 let documents = [];
 let activeId = null;
 let lastResult = null;
+let lastDoc = null;
 
 /* ======================= МЕЛКИЕ УТИЛИТЫ РЕНДЕРА ======================= */
 
@@ -107,11 +108,24 @@ function clearHighlight(){
   document.querySelectorAll('.sent').forEach(sp=>{ sp.classList.remove('term-hit'); sp.classList.remove('dim'); });
 }
 
-/* ======================= РЕФЕРАТ ======================= */
+/* ======================= ИТОГОВЫЙ РЕФЕРАТ (2 раздела + ссылка на исходник) ======================= */
 
-function renderSummaryPanel(result){
-  document.getElementById('summaryEmpty').style.display='none';
-  document.getElementById('summaryContent').style.display='block';
+function renderReportPanel(result, doc){
+  document.getElementById('reportEmpty').style.display='none';
+  document.getElementById('reportContent').style.display='block';
+
+  const link = document.getElementById('sourceLink');
+  link.innerHTML = '';
+  link.appendChild(document.createTextNode('Исходный документ: '));
+  const a = el('span','link-btn', doc.name);
+  a.addEventListener('click', ()=>switchTab('panelDoc'));
+  link.appendChild(a);
+
+  renderSummarySection(result);
+  renderKeywordsSection(result);
+}
+
+function renderSummarySection(result){
   const wrap = document.getElementById('summaryRender');
   wrap.innerHTML='';
   const title = el('p','summary-title', 'Тема (авто): ' + result.autoTitle);
@@ -124,11 +138,7 @@ function renderSummaryPanel(result){
   wrap.appendChild(p);
 }
 
-/* ======================= КЛЮЧЕВЫЕ СЛОВА ======================= */
-
-function renderKeywordsPanel(result){
-  document.getElementById('kwEmpty').style.display='none';
-  document.getElementById('kwContent').style.display='block';
+function renderKeywordsSection(result){
   const tree = document.getElementById('kwTree');
   tree.innerHTML='';
   const kw = result.keywords;
@@ -182,6 +192,34 @@ function renderKeywordsPanel(result){
     }
     tree.appendChild(kids);
   }
+}
+
+function buildCombinedReportText(result, doc){
+  const lines = [];
+  lines.push('РЕФЕРАТ ДОКУМЕНТА: ' + doc.name);
+  lines.push('Тема (авто): ' + result.autoTitle);
+  lines.push('Язык: ' + doc.struct.lang + ' · Предметная область: ' + result.domain.label);
+  lines.push('');
+  lines.push('1. КЛАССИЧЕСКИЙ РЕФЕРАТ');
+  lines.push('');
+  lines.push(result.summarySentences.map(s=>s.displayText).join(' '));
+  lines.push('');
+  lines.push('2. РЕФЕРАТ В ВИДЕ КЛЮЧЕВЫХ СЛОВ');
+  lines.push('');
+  const kw = result.keywords;
+  if(kw.method==='rake'){
+    kw.phrases.forEach(p=>lines.push('- ' + p.phrase + ' (' + p.score.toFixed(1) + ')'));
+  } else {
+    kw.hierarchy.forEach(h=>{
+      lines.push('- ' + h.head + ' (' + h.w.toFixed(2) + ')');
+      h.children.forEach(c=>lines.push('    · ' + c.phrase));
+    });
+    if(kw.otherPhrases.length){
+      lines.push('- другие словосочетания:');
+      kw.otherPhrases.forEach(c=>lines.push('    · ' + c.phrase));
+    }
+  }
+  return lines.join('\n');
 }
 
 /* ======================= ГРАФ ПОНЯТИЙ ======================= */
@@ -335,9 +373,9 @@ function runActive(){
   const doc = documents.find(d=>d.id===activeId);
   const result = runSummarization(doc, getOpts(), documents, documents.length>1);
   lastResult = result;
+  lastDoc = doc;
   renderDocPanel(result);
-  renderSummaryPanel(result);
-  renderKeywordsPanel(result);
+  renderReportPanel(result, doc);
   renderGraphPanel(result);
   renderComparisonPanel(result);
   renderStats(result, doc);
@@ -414,6 +452,27 @@ document.getElementById('lenSlider').addEventListener('input', e=>{
 
 document.getElementById('runBtn').addEventListener('click', runActive);
 document.getElementById('runTestsBtn').addEventListener('click', runTestCollection);
+
+function downloadBlob(content, filename, type){
+  const blob = new Blob([content], {type});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+document.getElementById('saveReportTxt').addEventListener('click', ()=>{
+  if(!lastResult || !lastDoc) return;
+  downloadBlob(buildCombinedReportText(lastResult, lastDoc), 'referat.txt', 'text/plain');
+});
+document.getElementById('printReport').addEventListener('click', ()=>window.print());
+document.getElementById('saveKwJson').addEventListener('click', ()=>{
+  if(!lastResult) return;
+  const kw = lastResult.keywords;
+  const data = kw.method==='rake'
+    ? {method:'rake', phrases: kw.phrases.map(p=>({phrase:p.phrase, score:+p.score.toFixed(3)}))}
+    : {method:'tfidf', hierarchy: kw.hierarchy.map(h=>({head:h.head, weight:+h.w.toFixed(3), children:h.children.map(c=>c.phrase)})), other: kw.otherPhrases.map(p=>p.phrase)};
+  downloadBlob(JSON.stringify(data,null,2), 'keywords.json', 'application/json');
+});
 
 renderDocList();
 updateModeNote();

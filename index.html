@@ -49,7 +49,7 @@
       <div class="field">
         <label>Метод построения</label>
         <select id="methodSelect">
-          <option value="tfidf">TF-IDF + позиция (методичка)</option>
+          <option value="tfidf">TF-IDF + позиция</option>
           <option value="textrank">TextRank (граф схожести)</option>
           <option value="luhn">Luhn (скопление частых слов)</option>
           <option value="ensemble">Ансамбль (среднее трёх методов)</option>
@@ -103,8 +103,7 @@
 
     <div class="tabs">
       <div class="tab active" data-panel="panelDoc">Документ</div>
-      <div class="tab" data-panel="panelSummary">Реферат</div>
-      <div class="tab" data-panel="panelKeywords">Ключевые слова</div>
+      <div class="tab" data-panel="panelReport">Итоговый реферат</div>
       <div class="tab" data-panel="panelAnalysis">Анализ</div>
       <div class="tab help-tab" data-panel="panelHelp">Справка</div>
     </div>
@@ -124,27 +123,32 @@
       </div>
     </div>
 
-    <div class="panel" id="panelSummary">
-      <div id="summaryEmpty" class="empty-state">
+    <div class="panel" id="panelReport">
+      <div id="reportEmpty" class="empty-state">
         <div class="glyph">¶</div>
-        <p>Классический реферат появится здесь после построения — набор из наиболее весомых предложений в порядке их следования в тексте.</p>
+        <p>Постройте реферат слева — здесь появится итоговый документ из двух разделов: классический реферат и реферат в виде ключевых слов, со ссылкой на исходный документ и средствами сохранения/печати.</p>
       </div>
-      <div id="summaryContent" style="display:none;">
-        <div class="summary-render" id="summaryRender"></div>
-      </div>
-    </div>
+      <div id="reportContent" style="display:none;">
 
-    <div class="panel" id="panelKeywords">
-      <div id="kwEmpty" class="empty-state">
-        <div class="glyph">#</div>
-        <p>Здесь появится реферат в виде ключевых слов — иерархия терминов (TF-IDF) или ранжированные словосочетания (RAKE), в зависимости от выбранного слева метода.</p>
-      </div>
-      <div id="kwContent" style="display:none;">
+        <p class="source-link" id="sourceLink"></p>
+
+        <div class="btn-row" style="margin-bottom:22px;">
+          <button id="saveReportTxt">Сохранить реферат (.txt)</button>
+          <button class="ghost" id="printReport">Печать</button>
+        </div>
+
+        <h3 class="report-h">1. Классический реферат</h3>
+        <div class="summary-render" id="summaryRender"></div>
+
+        <h3 class="report-h">2. Реферат в виде ключевых слов</h3>
+        <div class="btn-row" style="margin-bottom:14px;">
+          <button class="small ghost" id="saveKwJson">Сохранить только ключевые слова (.json)</button>
+        </div>
         <div class="kw-tree" id="kwTree"></div>
         <details class="adv" style="margin-top:22px;">
           <summary>Граф понятий</summary>
           <div id="graphContent" class="graph-wrap" style="margin-top:16px;">
-            <p class="graph-note">Граф ограничен top-8 понятиями и самыми сильными связями между ними — ради читаемости. Наведите курсор на узел или строку легенды, чтобы подсветить предложения-носители понятия во вкладке «Документ».</p>
+            <p class="graph-note">Граф ограничен top-8 понятиями и самыми сильными связями между ними.</p>
             <svg id="graphSvg" viewBox="0 0 820 480"></svg>
             <div id="graphLegend" class="graph-legend"></div>
           </div>
@@ -180,6 +184,14 @@
 
     <div class="panel" id="panelHelp">
       <div class="help-content">
+
+        <h2>Быстрый старт</h2>
+        <ol class="quickstart">
+          <li>Слева загрузите документ (файл, вставленный текст или «Загрузить примеры»).</li>
+          <li>При необходимости настройте метод и длину реферата, нажмите «Построить реферат».</li>
+          <li>На вкладке «Итоговый реферат» — готовый результат из двух разделов: классический реферат и ключевые слова, со ссылкой на исходный документ.</li>
+          <li>Кнопки «Сохранить реферат (.txt)» и «Печать» сохраняют или распечатывают оба раздела сразу.</li>
+        </ol>
 
         <h2>Как это работает</h2>
         <p>Документ разбивается на абзацы и предложения. Доступны четыре независимые методики ранжирования предложений:</p>
