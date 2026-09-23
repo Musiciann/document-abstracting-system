@@ -1,5 +1,3 @@
-/* ======================= ЛИНГВИСТИЧЕСКИЕ РЕСУРСЫ ======================= */
-
 const STOP_RU = new Set(("и в во не что он на я с со как а то все она так его но да ты к у же вы за бы по только ее мне было вот от меня еще нет о из ему теперь когда даже ну вдруг ли если уже или ни быть был него до вас нибудь опять уж вам сказал ведь там потом себя ничего ей может они тут где есть надо ней для мы тебя их чем была сам чтоб без будто чего раз тоже себе под будет ж тогда кто этот того потому этого какой совсем ним здесь этом один почти мой тем чтобы нее сейчас были куда зачем всех никогда можно при наконец два об другой хоть после над больше тот через эти нас про всего них какая много разве три эту моя впрочем хорошо свою этой перед иногда лучше чуть том нельзя такой им более всегда конечно всю между это который также которая которые которых которую этому которое либо однако кроме нежели вами тобою итак поэтому таким образом является являются были будут").split(' '));
 
 const STOP_EN = new Set(("a an the and or but if then else when while of to in on at for with without by from as is are was were be been being this that these those it its it's i you he she we they them his her their our your my me him us not no nor so than too very can will just don't should now also into over under again further once here there all any both each few more most other some such only own same either neither which who whom whose what where why how do does did doing having have has had".split(' ')));
@@ -12,8 +10,6 @@ const DOMAIN_TERMS = {
   art: ("картина полотно живопись художник композиция колорит мазок экспозиция выставка галерея искусство искусствоведческий стиль жанр холст палитра критик критика импрессионизм экспрессия форма перспектива painting canvas artist composition palette brushwork exhibition gallery art critic critique style genre aesthetic impression expression perspective sculpture museum curator".split(' '))
 };
 
-// Вводные конструкции для упрощения связности реферата (пункт методички: "удаление вводных
-// конструкций... с целью улучшения связности реферата"). Сравнение регистронезависимое, по началу предложения.
 const DISCOURSE_MARKERS = [
   'таким образом', 'кроме того', 'тем не менее', 'однако', 'в целом', 'итак',
   'следует отметить, что', 'стоит отметить, что', 'в результате', 'в связи с этим',
@@ -22,8 +18,6 @@ const DISCOURSE_MARKERS = [
   'in summary', 'in conclusion', 'as a result', 'first of all', 'for instance',
   'for example', 'in particular', 'meanwhile', 'in turn', 'that said'
 ];
-
-/* ======================= ПРИМЕРЫ ДОКУМЕНТОВ ======================= */
 
 const SAMPLES = [
 {name:'RU · медицина.txt', text:

@@ -1,5 +1,3 @@
-/* ======================= БАЗОВЫЕ NLP-ФУНКЦИИ ======================= */
-
 function detectLang(text){
   const cyr = (text.match(/[а-яёА-ЯЁ]/g)||[]).length;
   const lat = (text.match(/[a-zA-Z]/g)||[]).length;
@@ -85,8 +83,6 @@ function countTokens(tokens){
   return m;
 }
 
-// Убирает вводную конструкцию в начале предложения (см. DISCOURSE_MARKERS) — используется
-// при построении реферата, если включена опция "упрощать вводные конструкции".
 function trimDiscourseMarker(text){
   let out = text;
   for(const m of DISCOURSE_MARKERS){

@@ -1,7 +1,3 @@
-/* ======================= IDF: ОДИНОЧНЫЙ ДОКУМЕНТ VS КОЛЛЕКЦИЯ ======================= */
-
-// Возвращает {df:Map(term->df), DB:number, mode} — по коллекции документов, либо по абзацам
-// одного документа (когда коллекция недоступна — каждый абзац выступает псевдо-документом).
 function buildIdfBase(activeDoc, allDocsForCorpus, crossScriptFilter){
   if(allDocsForCorpus && allDocsForCorpus.length>1){
     const df = new Map();
@@ -32,10 +28,6 @@ function buildIdfBase(activeDoc, allDocsForCorpus, crossScriptFilter){
   return {df, DB: Math.max(paras.length,1), mode:'paragraph'};
 }
 
-/* ======================= МЕТОДЫ ПОСТРОЕНИЯ РЕФЕРАТА ======================= */
-// Каждый метод возвращает массив чисел (сырой вес), выровненный по индексам массива sentences.
-
-// Метод 1: TF-IDF с учётом позиции в документе/абзаце (метод из методички лабораторной работы)
 function methodTfidfPosition(sentences, wTD, D_total, opts){
   return sentences.map(s=>{
     const posd = 1 - (s.charBeforeGlobal / D_total);
@@ -51,8 +43,6 @@ function methodTfidfPosition(sentences, wTD, D_total, opts){
   });
 }
 
-// Метод 2: TextRank — граф схожести предложений (пересечение слов, нормированное по длине,
-// классическая формула TextRank) + степенной метод (аналог PageRank) для ранжирования узлов.
 function methodTextRank(sentences){
   const n = sentences.length;
   if(n===0) return [];
@@ -86,9 +76,6 @@ function methodTextRank(sentences){
   return scores;
 }
 
-// Метод 3: Luhn — классический метод скопления значимых (частотных) слов.
-// Значимые слова — самые частые содержательные слова документа; вес предложения —
-// максимум по формуле (кол-во значимых слов в скоплении)^2 / длина скопления.
 function methodLuhn(sentences, tfD){
   const freqs = [...tfD.entries()].sort((a,b)=>b[1]-a[1]);
   const topCount = Math.max(4, Math.round(freqs.length*0.2));
@@ -121,9 +108,6 @@ function minMaxNormalize(arr){
   return arr.map(v=>(v-min)/(max-min));
 }
 
-// MMR (Maximal Marginal Relevance): вместо чистого top-N по весу — на каждом шаге выбираем
-// предложение с наибольшим (λ·вес − (1−λ)·схожесть с уже выбранными), что снижает дублирование
-// близких по содержанию предложений в реферате.
 function mmrSelect(sentences, baseScores, N, lambda){
   const n = sentences.length;
   const selected = [];
@@ -158,9 +142,6 @@ function topNByScore(baseScores, N){
     .sort((a,b)=>a-b);
 }
 
-/* ======================= КЛЮЧЕВЫЕ СЛОВА ======================= */
-
-// TF-IDF: топ-термины по w(t,D) + группировка словосочетаний (биграмм/триграмм) в иерархию.
 function extractKeywordsTfidf(sentences, wTD, tfD){
   const termWeights = [];
   for(const term of tfD.keys()) termWeights.push({term, w:wTD(term), tf:tfD.get(term)});
@@ -197,9 +178,6 @@ function extractKeywordsTfidf(sentences, wTD, tfD){
   return {method:'tfidf', topTerms, hierarchy, otherPhrases};
 }
 
-// RAKE (Rapid Automatic Keyword Extraction): кандидатные словосочетания — максимальные
-// последовательности не-стоп-слов; вес слова = степень совместной встречаемости / частота;
-// вес словосочетания = сумма весов входящих слов. Даёт словосочетания напрямую, без иерархии.
 function extractKeywordsRake(sentences){
   const phraseFreq = new Map();
   const wordFreq = new Map();
@@ -236,7 +214,6 @@ function extractKeywordsRake(sentences){
   return {method:'rake', phrases: phrases.slice(0,18)};
 }
 
-/* ======================= ОСНОВНАЯ ФУНКЦИЯ ПОСТРОЕНИЯ ======================= */
 
 function buildSentenceList(struct, crossScriptFilter){
   let sentences = [];
@@ -280,8 +257,6 @@ function runSummarization(doc, opts, documents, corpusMode){
     return 0.5*(1+tf/tfMaxD) * Math.log((DB+1)/df);
   }
 
-  // считаем сырые веса по всем трём базовым методам сразу — нужно и для выбранного метода,
-  // и для вкладки «Сравнение методов»
   const rawTfidf = methodTfidfPosition(sentences, wTD, D_total, opts);
   const rawTextRank = methodTextRank(sentences);
   const rawLuhn = methodLuhn(sentences, tfD);
@@ -304,7 +279,6 @@ function runSummarization(doc, opts, documents, corpusMode){
     displayText: opts.trimDiscourse ? trimDiscourseMarker(s.text) : s.text
   }));
 
-  // сравнение методов: top-N по каждому базовому методу без MMR, для честного сопоставления
   const idxTfidf = new Set(topNByScore(rawTfidf, N));
   const idxTextRank = new Set(topNByScore(rawTextRank, N));
   const idxLuhn = new Set(topNByScore(rawLuhn, N));
@@ -327,8 +301,6 @@ function runSummarization(doc, opts, documents, corpusMode){
     ? extractKeywordsRake(sentences)
     : extractKeywordsTfidf(sentences, wTD, tfD);
 
-  // топ-термины для графа и для авто-заголовка — всегда по TF-IDF (стабильнее и не зависит
-  // от выбранного метода ключевых слов в UI)
   const tfidfTermsForGraph = [...tfD.keys()].map(term=>({term, w:wTD(term)})).sort((a,b)=>b.w-a.w);
   const graphNodes = tfidfTermsForGraph.slice(0,8).map(t=>({id:t.term, w:t.w}));
   const nodeIdSet = new Set(graphNodes.map(n=>n.id));
@@ -349,9 +321,6 @@ function runSummarization(doc, opts, documents, corpusMode){
 
   const autoTitle = [...tfD.entries()].sort((a,b)=>b[1]-a[1]).slice(0,3).map(([term])=>term).join(' · ');
 
-  // Информативность реферата — покрытие частотных (а не редких tf-idf) тем документа: так метрика
-  // отражает, много ли из НАИБОЛЕЕ ЧАСТО обсуждаемого попало в реферат, независимо от того, что
-  // конкретный метод построения реферата мог выбрать предложения вокруг менее частых терминов.
   const topByFreq = [...tfD.entries()].sort((a,b)=>b[1]-a[1]).slice(0,14).map(([term])=>term);
   const vecDoc = topByFreq.map(t=>tfD.get(t)||0);
   const tfSummary = countTokens(summarySentences.flatMap(s=>s.tokensFiltered));

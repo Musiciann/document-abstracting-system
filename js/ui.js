@@ -1,11 +1,7 @@
-/* ======================= СОСТОЯНИЕ ======================= */
-
 let documents = [];
 let activeId = null;
 let lastResult = null;
 let lastDoc = null;
-
-/* ======================= МЕЛКИЕ УТИЛИТЫ РЕНДЕРА ======================= */
 
 function el(tag, cls, html){ const e=document.createElement(tag); if(cls) e.className=cls; if(html!==undefined) e.innerHTML=html; return e; }
 
@@ -15,8 +11,6 @@ const METHOD_LABELS = {
   luhn: 'Luhn',
   ensemble: 'Ансамбль (среднее трёх методов)'
 };
-
-/* ======================= ДОКУМЕНТЫ ======================= */
 
 function renderDocList(){
   const list = document.getElementById('docList');
@@ -68,8 +62,6 @@ function updateModeNote(){
     : `IDF терминов считается по абзацам документа. Добавьте ещё документы, чтобы включить оценку по коллекции.`;
 }
 
-/* ======================= ДОКУМЕНТ С ПОДСВЕТКОЙ ======================= */
-
 function weightToColor(w, maxW){
   const t = maxW>0 ? Math.min(w/maxW,1) : 0;
   return `rgba(214,164,74,${(0.12 + t*0.75).toFixed(2)})`;
@@ -107,8 +99,6 @@ function highlightTerm(term){
 function clearHighlight(){
   document.querySelectorAll('.sent').forEach(sp=>{ sp.classList.remove('term-hit'); sp.classList.remove('dim'); });
 }
-
-/* ======================= ИТОГОВЫЙ РЕФЕРАТ (2 раздела + ссылка на исходник) ======================= */
 
 function renderReportPanel(result, doc){
   document.getElementById('reportEmpty').style.display='none';
@@ -222,8 +212,6 @@ function buildCombinedReportText(result, doc){
   return lines.join('\n');
 }
 
-/* ======================= ГРАФ ПОНЯТИЙ ======================= */
-
 function renderGraphPanel(result){
   document.getElementById('graphContent').style.display='block';
   const svg = document.getElementById('graphSvg');
@@ -306,8 +294,6 @@ function renderGraphPanel(result){
   legend.appendChild(colEdges);
 }
 
-/* ======================= СРАВНЕНИЕ МЕТОДОВ ======================= */
-
 function renderComparisonPanel(result){
   document.getElementById('cmpEmpty').style.display='none';
   document.getElementById('cmpContent').style.display='block';
@@ -334,8 +320,6 @@ function renderComparisonPanel(result){
   `;
 }
 
-/* ======================= СТАТИСТИКА ======================= */
-
 function renderStats(result, doc){
   const words = doc.text.split(/\s+/).filter(Boolean).length;
   document.getElementById('statLen').innerHTML = `${result.totalSentences} <small>предл.</small> · ${words} <small>слов</small>`;
@@ -352,8 +336,6 @@ function renderStats(result, doc){
     ? `коллекция, |DB|=${result.idfBase.DB}`
     : `абзацы документа, |DB|=${result.idfBase.DB}`;
 }
-
-/* ======================= ЗАПУСК ======================= */
 
 function getOpts(){
   return {
@@ -402,8 +384,6 @@ function switchTab(panelId){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.panel===panelId));
   document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active', p.id===panelId));
 }
-
-/* ======================= СОБЫТИЯ ======================= */
 
 document.querySelectorAll('.tab').forEach(tab=>{
   tab.addEventListener('click', ()=>switchTab(tab.dataset.panel));
